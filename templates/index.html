@@ -15,7 +15,7 @@
           <p class="eyebrow">Academic support project</p>
           <h1>Student Support Dashboard</h1>
         </div>
-        <span class="local-badge"><span class="badge-dot"></span>Local demo · fictional data</span>
+        <span class="local-badge"><span class="badge-dot"></span>Demo dataset · sample scores</span>
         <div id="student-session" class="student-session hidden">
           <span>Signed in: <strong id="signed-in-name"></strong></span>
           <button id="logout-button" class="button button-secondary" type="button">Sign out</button>
@@ -34,7 +34,7 @@
           <button id="login-button" class="button button-primary" type="submit">Sign in</button>
           <p id="login-status" class="login-status" role="status" aria-live="polite"></p>
         </form>
-        <p class="login-demo-note">This class demo uses fictional records. The matching names are part of its generated dataset, so this login is not real account security. Do not enter real student information.</p>
+        <p class="login-demo-note">This is an educational demo. Named profiles use illustrative marks, not verified results, and this login is not secure account protection. Do not enter private student information.</p>
       </section>
     </main>
 
@@ -46,6 +46,20 @@
           <p>Choose a subject, compare three models, check fairness by gender, and search the flagged student names.</p>
         </div>
         <div class="intro-mark" aria-hidden="true"><span>01</span><span>05</span></div>
+      </section>
+
+      <section class="panel topper-panel" aria-labelledby="topper-heading">
+        <div class="panel-heading">
+          <div><p class="section-number">CLASS LEADER</p><h2 id="topper-heading">Top performer</h2></div>
+          <p class="panel-help">Ranked by overall average across all five subjects.</p>
+        </div>
+        <div class="topper-summary">
+          <div class="topper-identity"><span class="topper-crown" aria-hidden="true">★</span><div><strong id="topper-name">Loading…</strong><span id="topper-id">—</span></div></div>
+          <div class="topper-score"><strong id="topper-average">—</strong><span>overall / 100</span></div>
+          <div class="topper-semester" id="topper-semester">—</div>
+        </div>
+        <div id="topper-subjects" class="topper-subjects"></div>
+        <p class="footnote">Named profile scores are illustrative classroom demo values, not official assessed results.</p>
       </section>
 
       <section class="panel settings-panel" aria-labelledby="settings-heading">
@@ -80,7 +94,7 @@
       </section>
 
       <div id="dataset-warning" class="notice notice-warm">
-        This project uses generated demo records and fictional Indian names. It does not contain real student data.
+        Named profiles use illustrative marks, not verified assessment results. Do not use them for academic decisions.
       </div>
       <div id="error-box" class="notice notice-error hidden" role="alert"></div>
 

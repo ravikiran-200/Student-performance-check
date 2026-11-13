@@ -27,8 +27,8 @@ SUBJECTS = {
 }
 AUDIT_COLUMN = "gender"
 DATA_NOTE = (
-    "Project-generated demonstration data with fictional Indian names. "
-    "It contains no real student records."
+    "Demonstration dataset. Scores for the named classroom profiles are illustrative "
+    "examples, not verified assessment results."
 )
 RUNS: OrderedDict[str, dict] = OrderedDict()
 MAX_CACHED_RUNS = 6
@@ -200,6 +200,9 @@ def list_subjects():
         frame = _load_frame()
     except FileNotFoundError as error:
         return jsonify({"error": str(error)}), 500
+    topper = frame.sort_values(
+        ["overall_average", "student_id"], ascending=[False, True]
+    ).iloc[0]
     return jsonify(
         {
             "subjects": [
@@ -208,6 +211,16 @@ def list_subjects():
             ],
             "students": int(len(frame)),
             "note": DATA_NOTE,
+            "topper": {
+                "student_id": str(topper["student_id"]),
+                "student_name": str(topper["student_name"]),
+                "semester": int(topper["semester"]),
+                "overall_average": float(topper["overall_average"]),
+                "subject_marks": {
+                    label: _json_value(topper[column])
+                    for column, label in SUBJECTS.items()
+                },
+            },
         }
     )
 

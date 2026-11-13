@@ -45,6 +45,25 @@ function clearError() {
   byId("error-box").classList.add("hidden");
 }
 
+function renderTopper(topper) {
+  byId("topper-name").textContent = topper.student_name;
+  byId("topper-id").textContent = topper.student_id;
+  byId("topper-average").textContent = number(topper.overall_average, 1);
+  byId("topper-semester").textContent = `Semester ${topper.semester}`;
+  const marks = byId("topper-subjects");
+  marks.replaceChildren();
+  for (const [subject, score] of Object.entries(topper.subject_marks)) {
+    const item = document.createElement("div");
+    item.className = "topper-mark";
+    const label = document.createElement("span");
+    label.textContent = subject;
+    const value = document.createElement("strong");
+    value.textContent = `${number(score, 1)} / 100`;
+    item.append(label, value);
+    marks.append(item);
+  }
+}
+
 async function requestJson(url, options = {}) {
   const response = await fetch(url, {
     headers: { "Content-Type": "application/json", ...(options.headers || {}) },
@@ -67,7 +86,8 @@ async function loadSubjects() {
       subjectSelect.append(option);
     }
     subjectSelect.value = "applied_data_science_marks";
-    byId("subject-note").textContent = `${payload.students} fictional project records across five subjects.`;
+    renderTopper(payload.topper);
+    byId("subject-note").textContent = `${payload.students} demo records across five subjects.`;
     byId("dataset-warning").textContent = payload.note;
     setStatus("Choose a subject and run the analysis.");
   } catch (error) {
