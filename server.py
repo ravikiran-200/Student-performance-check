@@ -45,12 +45,18 @@ app.config.update(
 
 @app.before_request
 def require_student_login():
-    public_endpoints = {"home", "login", "current_session", "logout", "static"}
-    if request.endpoint in public_endpoints or session.get("student_id"):
+    public_endpoints = {"home", "login", "admin_login", "current_session", "logout", "static"}
+    if request.endpoint in public_endpoints:
         return None
-    if request.path.startswith("/api/"):
-        return jsonify({"error": "Please sign in with your student ID and name."}), 401
-    return redirect("/")
+    role = session.get("role")
+    if role not in {"student", "admin"}:
+        if request.path.startswith("/api/"):
+            return jsonify({"error": "Please sign in to continue."}), 401
+        return redirect("/")
+    if role == "student" and request.endpoint != "my_performance":
+        return jsonify({"error": "Student accounts can view only their own performance record."}), 403
+    if role == "admin" and request.endpoint == "my_performance" and not session.get("view_student_id"):
+        return jsonify({"error": "Choose a student to open their individual view."}), 400
 
 
 def _json_value(value):
@@ -144,6 +150,9 @@ def home():
 
 @app.get("/api/session")
 def current_session():
+    if session.get("role") == "admin":
+        return jsonify({"authenticated": True, "role": "admin",
+                        "view_student_id": session.get("view_student_id")})
     student_id = session.get("student_id")
     if not student_id:
         return jsonify({"authenticated": False})
@@ -159,6 +168,7 @@ def current_session():
     row = matches.iloc[0]
     return jsonify({
         "authenticated": True,
+        "role": "student",
         "student": {"student_id": student_id, "student_name": str(row["student_name"])},
     })
 
@@ -182,16 +192,114 @@ def login():
     if not secrets.compare_digest(password.casefold(), student_name.casefold()):
         return jsonify({"error": "Student ID or password did not match."}), 401
     session.clear()
+    session["role"] = "student"
     session["student_id"] = student_id
-    return jsonify({"authenticated": True, "student": {
+    return jsonify({"authenticated": True, "role": "student", "student": {
         "student_id": student_id, "student_name": student_name,
     }})
+
+
+@app.post("/api/admin-login")
+def admin_login():
+    body = request.get_json(silent=True) or {}
+    username = str(body.get("username", "")).strip()
+    password = str(body.get("password", ""))
+    expected_username = os.environ.get("ADMIN_USERNAME", "Imandi Raju")
+    expected_password = os.environ.get("ADMIN_PASSWORD")
+    if not expected_password:
+        return jsonify({"error": "Admin sign-in is not configured. Set ADMIN_PASSWORD in the hosting environment."}), 503
+    if (not secrets.compare_digest(username.casefold(), expected_username.casefold())
+            or not secrets.compare_digest(password, expected_password)):
+        return jsonify({"error": "Admin username or password did not match."}), 401
+    session.clear()
+    session["role"] = "admin"
+    return jsonify({"authenticated": True, "role": "admin"})
 
 
 @app.post("/api/logout")
 def logout():
     session.clear()
     return jsonify({"authenticated": False})
+
+
+@app.get("/api/my-performance")
+def my_performance():
+    student_id = str(
+        session.get("view_student_id") if session.get("role") == "admin"
+        else session.get("student_id", "")
+    ).upper()
+    try:
+        frame = _load_frame()
+    except (FileNotFoundError, ValueError) as error:
+        app.logger.exception("Could not load the signed-in student's record")
+        return jsonify({"error": "Your performance record is temporarily unavailable."}), 500
+
+    matches = frame.loc[frame["student_id"].astype(str).str.upper() == student_id]
+    if matches.empty:
+        session.clear()
+        return jsonify({"error": "This student record is no longer available. Please sign in again."}), 404
+
+    row = matches.iloc[0]
+    return jsonify({
+        "student": {
+            "student_id": student_id,
+            "student_name": str(row["student_name"]),
+            "semester": int(row["semester"]),
+            "overall_average": _json_value(row["overall_average"]),
+            "attendance_percent": _json_value(row["attendance_percent"]),
+            "weekly_study_hours": _json_value(row["weekly_study_hours"]),
+            "assignment_completion_percent": _json_value(row["assignment_completion_percent"]),
+            "lab_completion_percent": _json_value(row["lab_completion_percent"]),
+            "class_participation_score": _json_value(row["class_participation_score"]),
+            "subject_marks": [
+                {"subject": label, "mark": _json_value(row[column])}
+                for column, label in SUBJECTS.items()
+            ],
+        },
+        "note": "This project stores one demo record per student, not dated history or verified assessment results.",
+    })
+
+
+@app.get("/api/admin-overview")
+def admin_overview():
+    try:
+        frame = _load_frame()
+    except (FileNotFoundError, ValueError):
+        app.logger.exception("Could not load the admin dashboard dataset")
+        return jsonify({"error": "The dashboard data is temporarily unavailable."}), 500
+    ordered = frame.sort_values(["overall_average", "student_id"], ascending=[False, True])
+    students = [{
+        "student_id": str(row.student_id),
+        "student_name": str(row.student_name),
+        "semester": int(row.semester),
+        "overall_average": _json_value(row.overall_average),
+    } for row in ordered.itertuples(index=False)]
+    averages = pd.to_numeric(frame["overall_average"], errors="coerce")
+    return jsonify({
+        "students": students,
+        "total_students": len(students),
+        "class_average": round(float(averages.mean()), 1) if averages.notna().any() else None,
+        "topper": students[0] if students else None,
+        "note": DATA_NOTE,
+    })
+
+
+@app.post("/api/admin/view-student")
+def admin_view_student():
+    body = request.get_json(silent=True) or {}
+    student_id = str(body.get("student_id", "")).strip().upper()
+    frame = _load_frame()
+    matches = frame.loc[frame["student_id"].astype(str).str.upper() == student_id]
+    if matches.empty:
+        return jsonify({"error": "That student ID was not found."}), 404
+    session["view_student_id"] = student_id
+    return jsonify({"viewing_student": student_id})
+
+
+@app.post("/api/admin/return")
+def admin_return():
+    session.pop("view_student_id", None)
+    return jsonify({"role": "admin", "view_student_id": None})
 
 
 @app.get("/api/subjects")
@@ -518,4 +626,3 @@ if __name__ == "__main__":
     host = "0.0.0.0" if os.environ.get("PORT") else "127.0.0.1"
     print(f"Student Support Dashboard is running on port {port}")
     app.run(host=host, port=port, debug=False)
-

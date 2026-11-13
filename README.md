@@ -26,39 +26,62 @@ Keep the terminal open while using the site. Press **Ctrl+C** to stop it. If Win
 
 The repository includes `render.yaml`, `.python-version`, and Gunicorn configuration for Render. Create a private GitHub repository for this project and push the project files (do not include `.venv`). In Render, choose **New → Blueprint**, connect that repository, and deploy the `render.yaml` Blueprint. Render will install `requirements.txt` and start `gunicorn server:app`. The app uses Render's assigned port and binds to `0.0.0.0` in production. The free service may spin down when idle.
 
-## What it does
+## Student demo login
 
-- Choose Applied Data Science, Machine Learning, Data Warehouse and Data Mining, Coding Skills, or Principles of Big Data Management.
-- Set the mark cutoff. By default, a mark below 50 out of 100 is labelled at risk.
-- Compare Logistic Regression, Decision Tree, and Random Forest.
-- Compare accuracy, precision, recall, F1, ROC AUC, and fairness gaps by gender.
-- Search the names of students the Random Forest flags in the held-out test group.
-- View the actual mark for the selected subject and download the flagged list as a CSV.
-- Select a test student and see a SHAP explanation of one model prediction.
-- Show a MapReduce-style semester aggregation with mapper batches, a shuffle/group step, and reducer statistics for risk rate, mean marks, and attendance.
-- Connect the implementation to course topics in Big Data, Hadoop, HiveQL, and analytics with R.
+Sign in with the student ID as the username and the matching name as the password. The dataset includes named classroom demo profiles, so this login is only an educational access demo; it is not secure authentication. The listed marks for these profiles are illustrative values and are not verified assessment results.
+
+| Username | Password |
+| --- | --- |
+| `STU0601` | `RAJU` |
+| `STU0602` | `RAVI KIRAN` |
+| `STU0603` | `TANAMAI` |
+| `STU0604` | `BALA BHASKAR` |
+| `STU0605` | `ADITYA` |
+
+Render generates and stores a secret key for signed login sessions through the Blueprint configuration.
+
+## Admin dashboard
+
+The administrator signs in with the configured admin username and password, sees the class overview, searches the demo roster, and can open an individual student's tracking view. Use **Admin overview** to return to the class list. Student accounts remain restricted to their own record.
+
+For security, the admin password is not stored in this repository. Set `ADMIN_PASSWORD` as a secret environment variable in the Render service settings before using admin sign-in. The Blueprint sets `ADMIN_USERNAME` to `Imandi Raju` and marks `ADMIN_PASSWORD` as a value to supply privately. For local use, set `ADMIN_PASSWORD` in the shell before starting Flask. Do not put the password in this file, source code, or GitHub.
+
+## Student dashboard
+
+After signing in, a student sees only the record linked to their own student ID: their subject marks, average, semester, attendance, study hours, assignment and lab completion, and participation score. The app does not show classmates, class rankings, cohort summaries, or other students' at-risk lists in a student session. The server blocks the class-wide analysis and download endpoints for student accounts as well.
+
+The CSV has one current row per student, not dated snapshots, so the dashboard displays a current profile rather than a historical trend chart. The five named classroom profiles use illustrative marks and are not verified assessment results.
 
 ## Big data course concepts applied
 
 The `/api/big-data` endpoint demonstrates a batch processing workflow over the project CSV. The mapper emits `(semester, values)` pairs in batches of 100 records; the shuffle groups values by semester; and the reducer calculates student counts, counts and rates below a 50 mark average, mean overall average, and mean attendance. The dashboard displays the results.
 
-This is an educational MapReduce-style simulation implemented in local Python. It does not start Hadoop, use HDFS, or execute work in parallel. The dataset has only 600 rows, so it demonstrates the processing pattern rather than a big data scale workload. The Hive panel shows an equivalent HiveQL aggregation. R is a course connection for exploratory analysis and graphs; this application runs its analysis in Python.
+This is an educational MapReduce-style simulation implemented in local Python. It does not start Hadoop, use HDFS, or execute work in parallel. The dataset has only 605 rows, so it demonstrates the processing pattern rather than a big data scale workload. A HiveQL `GROUP BY` query could express a similar aggregation, but the app does not execute HiveQL. R is a course connection for exploratory analysis and graphs; this application runs its analysis in Python.
+
+An equivalent HiveQL-style semester summary would be:
+
+```sql
+SELECT semester, COUNT(*) AS students,
+       AVG(overall_average) AS mean_mark
+FROM student_performance
+GROUP BY semester;
+```
 
 | Course area | Project connection |
 | --- | --- |
 | Big Data concepts, types, and storage | Structured CSV data; local storage and a note about limits of this small dataset |
 | Parallel and distributed processing | Map, shuffle, and reduce stages are shown, with the local sequential simulation clearly identified |
 | Hadoop / HDFS | Described as a possible deployment path; not installed or claimed as active |
-| NoSQL and CAP theorem | Dashboard explains the consistency/availability tradeoff during a network partition and identifies this app as a single-machine CSV design |
-| HDFS architecture and replication | Dashboard explains NameNode metadata, DataNode blocks, and replicated copies as a scale-out design concept |
-| Hive / HiveQL | Equivalent `GROUP BY semester` query shown in the dashboard |
+| NoSQL and CAP theorem | README explains the consistency/availability tradeoff during a network partition and identifies this app as a single-machine CSV design |
+| HDFS architecture and replication | README explains NameNode metadata, DataNode blocks, and replicated copies as a scale-out design concept |
+| Hive / HiveQL | README includes an equivalent `GROUP BY semester` query; the app does not run Hive |
 | Data analytics using R | Existing statistical summaries, model metrics, fairness comparison, and explanations; R is noted as an alternative tool |
 
 The supplied `risk_by_semester.txt` is not used as a source of results; the displayed semester table is computed from the CSV at request time.
 
 ## Project dataset
 
-`data/indian_student_performance_demo.csv` is a newly generated, fictional dataset with 600 records. It has Indian-style fictional names, semester, attendance, study hours, assignment and lab completion, participation, marks for all five subjects, and an overall average. It contains no real school records and should not be described as real data from India.
+`data/indian_student_performance_demo.csv` contains 600 generated demo profiles and five named classroom demo profiles. The other named profiles have illustrative scores because no assessed marks were supplied. Do not treat these values as official results or use them for academic decisions.
 
 `generate_dataset.py` recreates the synthetic CSV using Python's standard library.
 
@@ -66,6 +89,6 @@ For each analysis, the selected subject's mark is the prediction target. Names, 
 
 ## Notes
 
-The dataset uses made-up values and a fixed split to demonstrate the workflow. Its model scores do not show how the system would perform at a real Indian college. A prediction is only a prompt to review a student's situation; it should not decide academic support on its own.
+The generated dataset uses illustrative values and a fixed split to demonstrate the workflow. Its model scores do not show how the system would perform at a real college. A prediction is only a prompt to review a student's situation; it should not decide academic support on its own.
 
 The server listens only on `127.0.0.1` and is for local use. Put it online only after preparing a production setup, reviewing privacy and consent, and choosing a host. Do not upload real student records or secrets to GitHub.
