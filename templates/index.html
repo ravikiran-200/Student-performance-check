@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="A local student project for clear, fair, and explainable academic support predictions.">
+    <meta name="description" content="Student performance dashboard with private student tracking and admin class overview.">
     <title>Student Support Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   </head>
@@ -11,207 +11,67 @@
     <header class="site-header">
       <div class="header-inner">
         <div class="brand-mark" aria-hidden="true">SP</div>
-        <div class="brand-copy">
-          <p class="eyebrow">Academic support project</p>
-          <h1>Student Support Dashboard</h1>
-        </div>
+        <div class="brand-copy"><p class="eyebrow">Academic support project</p><h1>Student Support Dashboard</h1></div>
         <span class="local-badge"><span class="badge-dot"></span>Demo dataset · sample scores</span>
         <div id="student-session" class="student-session hidden">
-          <span>Signed in: <strong id="signed-in-name"></strong></span>
+          <span id="signed-in-label">Signed in</span>
+          <button id="return-admin-button" class="button button-secondary hidden" type="button">Admin overview</button>
           <button id="logout-button" class="button button-secondary" type="button">Sign out</button>
         </div>
       </div>
     </header>
 
     <main id="login-screen" class="login-shell">
-      <section class="login-card" aria-labelledby="login-heading">
-        <p class="section-number">STUDENT ACCESS</p>
-        <h2 id="login-heading">Sign in to the project</h2>
+      <section class="login-card" aria-labelledby="student-login-heading">
+        <p class="section-number">STUDENT ACCESS</p><h2 id="student-login-heading">Student sign in</h2>
         <p class="login-intro">Use your student ID as your username and your matching name as the password.</p>
         <form id="login-form" class="login-form">
           <label class="field"><span>Student ID</span><input id="login-student-id" name="student_id" autocomplete="username" placeholder="For example, STU0001" required></label>
           <label class="field"><span>Password · your full name</span><input id="login-password" name="password" type="password" autocomplete="current-password" required></label>
-          <button id="login-button" class="button button-primary" type="submit">Sign in</button>
+          <button id="login-button" class="button button-primary" type="submit">Sign in as student</button>
           <p id="login-status" class="login-status" role="status" aria-live="polite"></p>
         </form>
-        <p class="login-demo-note">This is an educational demo. Named profiles use illustrative marks, not verified results, and this login is not secure account protection. Do not enter private student information.</p>
+        <p class="login-demo-note">Educational demo only. Named profiles use illustrative marks, not verified results.</p>
+      </section>
+      <section class="login-card admin-login-card" aria-labelledby="admin-login-heading">
+        <p class="section-number">ADMIN ACCESS</p><h2 id="admin-login-heading">Administrator sign in</h2>
+        <p class="login-intro">Sign in to see the class overview and open an individual student view.</p>
+        <form id="admin-login-form" class="login-form">
+          <label class="field"><span>Admin username</span><input id="admin-username" name="username" autocomplete="username" required></label>
+          <label class="field"><span>Password</span><input id="admin-password" name="password" type="password" autocomplete="current-password" required></label>
+          <button id="admin-login-button" class="button button-primary" type="submit">Sign in as admin</button>
+          <p id="admin-login-status" class="login-status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+    </main>
+
+    <main id="admin-dashboard" class="page-shell hidden">
+      <section class="intro"><div><p class="section-kicker">ADMINISTRATOR VIEW</p><h2>Class performance overview</h2><p>Review the demonstration cohort and open a student's private tracking page.</p></div></section>
+      <div id="admin-error" class="notice notice-error hidden" role="alert"></div>
+      <section class="personal-metrics admin-metrics">
+        <article class="summary-card"><span>Students in dataset</span><strong id="admin-total">—</strong></article>
+        <article class="summary-card"><span>Class average</span><strong id="admin-average">—</strong></article>
+        <article class="summary-card"><span>Top performer</span><strong id="admin-topper">—</strong></article>
+      </section>
+      <section class="panel" aria-labelledby="student-list-heading">
+        <div class="panel-heading"><div><p class="section-number">STUDENT RECORDS</p><h2 id="student-list-heading">Choose a student</h2></div><label class="field admin-search"><span>Search by name or ID</span><input id="student-search" type="search" placeholder="Search students"></label></div>
+        <div class="table-wrap"><table class="admin-table"><thead><tr><th>Student</th><th>ID</th><th>Semester</th><th>Average</th><th></th></tr></thead><tbody id="admin-student-list"></tbody></table></div>
+        <p class="footnote">Demo scores are illustrative and should not be used for academic decisions.</p>
       </section>
     </main>
 
     <main id="dashboard-app" class="page-shell hidden">
-      <section class="intro">
-        <div>
-          <p class="section-kicker">STUDENT PERFORMANCE · EXPLAINABLE ML</p>
-          <h2>Find students who may need extra support</h2>
-          <p>Choose a subject, compare three models, check fairness by gender, and search the flagged student names.</p>
-        </div>
-        <div class="intro-mark" aria-hidden="true"><span>01</span><span>05</span></div>
+      <section class="intro"><div><p id="student-view-kicker" class="section-kicker">YOUR STUDENT RECORD</p><h2 id="student-view-title">Your performance</h2><p id="student-view-description">This view shows only the record linked to your sign-in.</p></div></section>
+      <div id="performance-error" class="notice notice-error hidden" role="alert"></div>
+      <section class="panel personal-panel" aria-labelledby="personal-heading">
+        <div class="panel-heading"><div><p class="section-number">MY TRACKING</p><h2 id="personal-heading">Current record</h2></div><p id="personal-student-id" class="panel-help">Loading your record…</p></div>
+        <div class="personal-metrics"><article class="summary-card personal-average"><span>Overall average</span><strong id="personal-average">—</strong></article><article class="summary-card"><span>Semester</span><strong id="personal-semester">—</strong></article><article class="summary-card"><span>Attendance</span><strong id="personal-attendance">—</strong></article><article class="summary-card"><span>Weekly study hours</span><strong id="personal-study-hours">—</strong></article></div>
       </section>
-
-      <section class="panel topper-panel" aria-labelledby="topper-heading">
-        <div class="panel-heading">
-          <div><p class="section-number">CLASS LEADER</p><h2 id="topper-heading">Top performer</h2></div>
-          <p class="panel-help">Ranked by overall average across all five subjects.</p>
-        </div>
-        <div class="topper-summary">
-          <div class="topper-identity"><span class="topper-crown" aria-hidden="true">★</span><div><strong id="topper-name">Loading…</strong><span id="topper-id">—</span></div></div>
-          <div class="topper-score"><strong id="topper-average">—</strong><span>overall / 100</span></div>
-          <div class="topper-semester" id="topper-semester">—</div>
-        </div>
-        <div id="topper-subjects" class="topper-subjects"></div>
-        <p class="footnote">Named profile scores are illustrative classroom demo values, not official assessed results.</p>
-      </section>
-
-      <section class="panel settings-panel" aria-labelledby="settings-heading">
-        <div class="panel-heading">
-          <div>
-            <p class="section-number">01 / SETUP</p>
-            <h2 id="settings-heading">Choose subject and alert settings</h2>
-          </div>
-          <p class="panel-help">Marks are out of 100. A mark below the cutoff is labelled at risk.</p>
-        </div>
-        <form id="analysis-form" class="settings-grid">
-          <label class="field field-subject">
-            <span>Subject to review</span>
-            <select id="subject-select" required></select>
-            <small id="subject-note">Loading the project dataset…</small>
-          </label>
-          <label class="field">
-            <span>At-risk mark cutoff</span>
-            <input id="grade-cutoff" type="number" min="1" max="99" value="50" required>
-            <small>Students below this mark count as at risk.</small>
-          </label>
-          <label class="field">
-            <span>Alert threshold</span>
-            <input id="alert-threshold" type="number" min="0.1" max="0.9" step="0.05" value="0.5" required>
-            <small>Higher values flag fewer students.</small>
-          </label>
-          <div class="form-actions">
-            <button id="analyze-button" class="button button-primary" type="submit">Run subject analysis</button>
-            <span id="page-status" role="status" aria-live="polite">Loading subjects…</span>
-          </div>
-        </form>
-      </section>
-
-      <div id="dataset-warning" class="notice notice-warm">
-        Named profiles use illustrative marks, not verified assessment results. Do not use them for academic decisions.
-      </div>
-      <div id="error-box" class="notice notice-error hidden" role="alert"></div>
-
-      <section class="panel" aria-labelledby="big-data-heading">
-        <div class="panel-heading"><div><p class="section-number">BIG DATA PROCESSING LAB</p><h2 id="big-data-heading">Semester summary with MapReduce</h2></div><p class="panel-help">A local batch simulation that demonstrates mapper, shuffle, and reducer stages.</p></div>
-        <div class="bigdata-stats">
-          <article class="summary-card"><span>Input records</span><strong id="bigdata-records">Loading…</strong></article>
-          <article class="summary-card"><span>Map batches</span><strong id="bigdata-batches">—</strong></article>
-          <article class="summary-card"><span>Processing pattern</span><strong>Batch / key-value</strong></article>
-        </div>
-        <div class="table-wrap"><table><thead><tr><th>Semester</th><th>Students</th><th>At risk (&lt;50 avg.)</th><th>Risk rate</th><th>Mean average</th><th>Mean attendance</th></tr></thead><tbody id="semester-summary"></tbody></table></div>
-        <p id="bigdata-note" class="footnote">Loading the MapReduce demonstration…</p>
-      </section>
-
-      <div id="results" class="hidden">
-        <section class="summary-grid" aria-label="Analysis summary">
-          <article class="summary-card"><span>Students in dataset</span><strong id="summary-students">—</strong></article>
-          <article class="summary-card"><span>Observed below cutoff</span><strong id="summary-risk-rate">—</strong></article>
-          <article class="summary-card"><span>Model inputs</span><strong id="summary-predictors">—</strong></article>
-          <article class="summary-card"><span>Fairness checked by</span><strong id="summary-group">—</strong></article>
-        </section>
-
-        <section class="panel" aria-labelledby="risk-heading">
-          <div class="panel-heading">
-            <div>
-              <p class="section-number">02 / STUDENT LIST</p>
-              <h2 id="risk-heading">Students to review</h2>
-              <p id="risk-subtitle" class="panel-help panel-help-left">Students flagged by the Random Forest model for the selected subject.</p>
-            </div>
-            <a id="download-risk-list" class="button button-secondary hidden" href="#">Download names</a>
-          </div>
-          <div class="risk-toolbar">
-            <label class="search-field">
-              <span class="search-icon" aria-hidden="true">⌕</span>
-              <input id="risk-search" type="search" placeholder="Search student name or ID" aria-label="Search at-risk students by name or ID">
-            </label>
-            <span id="risk-count" class="risk-count" aria-live="polite">Run an analysis to see flagged students.</span>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr><th>Student name</th><th>Student ID</th><th>Gender</th><th>Semester</th><th>Subject mark</th><th>Overall average</th><th>Risk chance</th></tr>
-              </thead>
-              <tbody id="risk-list-body"></tbody>
-            </table>
-          </div>
-          <p class="footnote">Names are fictional. This list shows only held-out test students whose Random Forest risk chance meets your alert threshold.</p>
-        </section>
-
-        <section class="panel" aria-labelledby="models-heading">
-          <div class="panel-heading">
-            <div><p class="section-number">03 / MODEL COMPARISON</p><h2 id="models-heading">How the models performed</h2></div>
-            <a id="download-results" class="button button-secondary hidden" href="#">Download results</a>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Model</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1</th>
-                  <th>ROC AUC</th><th>Demographic parity gap</th><th>Equal opportunity gap</th><th>Train (s)</th><th>Predict (ms)</th>
-                </tr>
-              </thead>
-              <tbody id="model-results"></tbody>
-            </table>
-          </div>
-          <p class="footnote">Results use a fixed 75/25 train/test split. Time values measure this computer's run, not money or energy costs.</p>
-        </section>
-
-        <section class="panel" aria-labelledby="fairness-heading">
-          <div class="panel-heading">
-            <div><p class="section-number">04 / FAIRNESS</p><h2 id="fairness-heading">Compare results by gender</h2></div>
-            <p class="panel-help">Smaller gaps mean the groups are closer on that measure. This check cannot prove a model is fair overall.</p>
-          </div>
-          <div id="fairness-summary" class="fairness-cards"></div>
-          <h3>Random Forest rates for each group</h3>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Gender group</th><th>Rule</th><th>Selection rate</th><th>True-positive rate</th><th>Test examples</th><th>At-risk examples</th></tr></thead>
-              <tbody id="group-rates"></tbody>
-            </table>
-          </div>
-          <p class="footnote">The adjusted model uses gender during its equal-opportunity experiment. This is a classroom comparison, not a school decision rule.</p>
-        </section>
-
-        <section class="panel" aria-labelledby="explain-heading">
-          <div class="panel-heading">
-            <div><p class="section-number">05 / EXPLANATION</p><h2 id="explain-heading">Why did the model flag a student?</h2></div>
-            <p class="panel-help">SHAP shows which inputs moved this model's estimate up or down. It does not show cause and effect.</p>
-          </div>
-          <div class="explain-controls">
-            <label class="field"><span>Model</span><select id="explain-model">
-              <option>Random Forest</option><option>Logistic Regression</option><option>Decision Tree</option>
-            </select></label>
-            <label class="field field-grow"><span>Test student</span><select id="example-select"></select></label>
-            <button id="explain-button" class="button button-secondary" type="button">Explain prediction</button>
-          </div>
-          <div id="prediction-summary" class="prediction-summary"></div>
-          <div class="explain-grid">
-            <div>
-              <h3>Information used by the model</h3>
-              <dl id="student-profile" class="profile-list"></dl>
-            </div>
-            <div>
-              <h3>Inputs with the biggest effect</h3>
-              <div id="shap-chart" class="shap-chart"></div>
-              <p class="footnote">Bars to the right increased the risk estimate; bars to the left lowered it.</p>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <footer class="site-footer">
-        <p>Local student project · Use these results as a learning demo, not as the only basis for student decisions.</p>
-        <p>The dataset and every name are generated examples, not real Indian student records.</p>
-      </footer>
+      <section class="panel" aria-labelledby="subject-marks-heading"><div class="panel-heading"><div><p class="section-number">SUBJECT RESULTS</p><h2 id="subject-marks-heading">Marks by subject</h2></div><p class="panel-help">Marks are out of 100.</p></div><div id="personal-subject-marks" class="personal-subject-marks" aria-live="polite"></div></section>
+      <section class="panel" aria-labelledby="study-heading"><div class="panel-heading"><div><p class="section-number">ACTIVITY</p><h2 id="study-heading">Participation and completion</h2></div><p class="panel-help">Values come from the current demo record.</p></div><div class="personal-metrics personal-metrics-compact"><article class="summary-card"><span>Assignment completion</span><strong id="personal-assignments">—</strong></article><article class="summary-card"><span>Lab completion</span><strong id="personal-labs">—</strong></article><article class="summary-card"><span>Class participation</span><strong id="personal-participation">—</strong></article></div></section>
+      <div id="personal-record-note" class="notice notice-warm">Loading the record…</div>
+      <footer class="site-footer"><p>Educational demo only. Scores are illustrative, not verified assessment results.</p><p>This dataset contains one current record per student, not a dated performance history.</p></footer>
     </main>
     <script src="{{ url_for('static', filename='app.js') }}" defer></script>
   </body>
 </html>
-
