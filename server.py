@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import math
 import os
+import secrets
 from collections import defaultdict
 from collections import OrderedDict
 from io import StringIO
@@ -10,7 +11,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pandas as pd
-from flask import Flask, Response, jsonify, render_template, request
+from flask import Flask, Response, jsonify, render_template, request, session, redirect
 
 from ml_engine import MODEL_NAMES, local_shap_values, prepare_data, run_benchmark
 
@@ -34,6 +35,22 @@ MAX_CACHED_RUNS = 6
 MODEL_LABELS = list(MODEL_NAMES)
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_urlsafe(32)
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=bool(os.environ.get("RENDER_EXTERNAL_URL")),
+)
+
+
+@app.before_request
+def require_student_login():
+    public_endpoints = {"home", "login", "current_session", "logout", "static"}
+    if request.endpoint in public_endpoints or session.get("student_id"):
+        return None
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "Please sign in with your student ID and name."}), 401
+    return redirect("/")
 
 
 def _json_value(value):
@@ -123,6 +140,58 @@ def _semester_mapreduce(frame: pd.DataFrame) -> dict:
 @app.get("/")
 def home():
     return render_template("index.html")
+
+
+@app.get("/api/session")
+def current_session():
+    student_id = session.get("student_id")
+    if not student_id:
+        return jsonify({"authenticated": False})
+    try:
+        frame = _load_frame()
+    except (FileNotFoundError, ValueError):
+        session.clear()
+        return jsonify({"authenticated": False})
+    matches = frame.loc[frame["student_id"].astype(str).str.upper() == student_id]
+    if matches.empty:
+        session.clear()
+        return jsonify({"authenticated": False})
+    row = matches.iloc[0]
+    return jsonify({
+        "authenticated": True,
+        "student": {"student_id": student_id, "student_name": str(row["student_name"])},
+    })
+
+
+@app.post("/api/login")
+def login():
+    body = request.get_json(silent=True) or {}
+    student_id = str(body.get("student_id", "")).strip().upper()
+    password = str(body.get("password", "")).strip()
+    if not student_id or not password:
+        return jsonify({"error": "Enter both your student ID and password."}), 400
+    try:
+        frame = _load_frame()
+    except (FileNotFoundError, ValueError) as error:
+        app.logger.exception("Could not load the demo student accounts")
+        return jsonify({"error": "Student login is temporarily unavailable."}), 500
+    matches = frame.loc[frame["student_id"].astype(str).str.upper() == student_id]
+    if matches.empty:
+        return jsonify({"error": "Student ID or password did not match."}), 401
+    student_name = str(matches.iloc[0]["student_name"]).strip()
+    if not secrets.compare_digest(password.casefold(), student_name.casefold()):
+        return jsonify({"error": "Student ID or password did not match."}), 401
+    session.clear()
+    session["student_id"] = student_id
+    return jsonify({"authenticated": True, "student": {
+        "student_id": student_id, "student_name": student_name,
+    }})
+
+
+@app.post("/api/logout")
+def logout():
+    session.clear()
+    return jsonify({"authenticated": False})
 
 
 @app.get("/api/subjects")
@@ -436,3 +505,4 @@ if __name__ == "__main__":
     host = "0.0.0.0" if os.environ.get("PORT") else "127.0.0.1"
     print(f"Student Support Dashboard is running on port {port}")
     app.run(host=host, port=port, debug=False)
+

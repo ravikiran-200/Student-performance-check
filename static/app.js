@@ -298,6 +298,61 @@ async function explainExample() {
   }
 }
 
+async function showSignedIn(student) {
+  byId("login-screen").classList.add("hidden");
+  byId("dashboard-app").classList.remove("hidden");
+  byId("student-session").classList.remove("hidden");
+  byId("signed-in-name").textContent = `${student.student_name} (${student.student_id})`;
+  byId("login-password").value = "";
+  await Promise.all([loadSubjects(), loadBigDataSummary()]);
+}
+
+async function restoreSession() {
+  try {
+    const payload = await requestJson("/api/session");
+    if (payload.authenticated) {
+      await showSignedIn(payload.student);
+      return;
+    }
+  } catch (error) {
+    byId("login-status").textContent = "Could not reach the sign-in service. Refresh and try again.";
+  }
+  byId("login-screen").classList.remove("hidden");
+  byId("dashboard-app").classList.add("hidden");
+}
+
+async function signIn(event) {
+  event.preventDefault();
+  const button = byId("login-button");
+  const status = byId("login-status");
+  button.disabled = true;
+  status.textContent = "Checking your details…";
+  try {
+    const payload = await requestJson("/api/login", {
+      method: "POST",
+      body: JSON.stringify({
+        student_id: byId("login-student-id").value,
+        password: byId("login-password").value,
+      }),
+    });
+    status.textContent = "";
+    await showSignedIn(payload.student);
+  } catch (error) {
+    status.textContent = error.message;
+    byId("login-password").select();
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function signOut() {
+  try {
+    await requestJson("/api/logout", { method: "POST", body: "{}" });
+  } finally {
+    window.location.reload();
+  }
+}
+
 function renderShap(contributions) {
   const chart = byId("shap-chart");
   chart.replaceChildren();
@@ -324,6 +379,8 @@ byId("explain-button").addEventListener("click", explainExample);
 byId("explain-model").addEventListener("change", explainExample);
 byId("example-select").addEventListener("change", explainExample);
 byId("risk-search").addEventListener("input", renderRiskStudents);
+byId("login-form").addEventListener("submit", signIn);
+byId("logout-button").addEventListener("click", signOut);
 
-loadSubjects();
-loadBigDataSummary();
+restoreSession();
+

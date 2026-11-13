@@ -16,10 +16,29 @@
           <h1>Student Support Dashboard</h1>
         </div>
         <span class="local-badge"><span class="badge-dot"></span>Local demo · fictional data</span>
+        <div id="student-session" class="student-session hidden">
+          <span>Signed in: <strong id="signed-in-name"></strong></span>
+          <button id="logout-button" class="button button-secondary" type="button">Sign out</button>
+        </div>
       </div>
     </header>
 
-    <main class="page-shell">
+    <main id="login-screen" class="login-shell">
+      <section class="login-card" aria-labelledby="login-heading">
+        <p class="section-number">STUDENT ACCESS</p>
+        <h2 id="login-heading">Sign in to the project</h2>
+        <p class="login-intro">Use your student ID as your username and your matching name as the password.</p>
+        <form id="login-form" class="login-form">
+          <label class="field"><span>Student ID</span><input id="login-student-id" name="student_id" autocomplete="username" placeholder="For example, STU0001" required></label>
+          <label class="field"><span>Password · your full name</span><input id="login-password" name="password" type="password" autocomplete="current-password" required></label>
+          <button id="login-button" class="button button-primary" type="submit">Sign in</button>
+          <p id="login-status" class="login-status" role="status" aria-live="polite"></p>
+        </form>
+        <p class="login-demo-note">This class demo uses fictional records. The matching names are part of its generated dataset, so this login is not real account security. Do not enter real student information.</p>
+      </section>
+    </main>
+
+    <main id="dashboard-app" class="page-shell hidden">
       <section class="intro">
         <div>
           <p class="section-kicker">STUDENT PERFORMANCE · EXPLAINABLE ML</p>
@@ -75,8 +94,6 @@
         <div class="table-wrap"><table><thead><tr><th>Semester</th><th>Students</th><th>At risk (&lt;50 avg.)</th><th>Risk rate</th><th>Mean average</th><th>Mean attendance</th></tr></thead><tbody id="semester-summary"></tbody></table></div>
         <p id="bigdata-note" class="footnote">Loading the MapReduce demonstration…</p>
       </section>
-
-      
 
       <div id="results" class="hidden">
         <section class="summary-grid" aria-label="Analysis summary">
@@ -183,3 +200,4 @@
     <script src="{{ url_for('static', filename='app.js') }}" defer></script>
   </body>
 </html>
+
