@@ -1,0 +1,6 @@
+Semester 1	25
+Semester 2	33
+Semester 3	29
+Semester 4	28
+Semester 5	29
+Semester 6	30

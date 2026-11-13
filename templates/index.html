@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="A local student project for clear, fair, and explainable academic support predictions.">
+    <title>Student Support Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-inner">
+        <div class="brand-mark" aria-hidden="true">SP</div>
+        <div class="brand-copy">
+          <p class="eyebrow">Academic support project</p>
+          <h1>Student Support Dashboard</h1>
+        </div>
+        <span class="local-badge"><span class="badge-dot"></span>Local demo · fictional data</span>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <section class="intro">
+        <div>
+          <p class="section-kicker">STUDENT PERFORMANCE · EXPLAINABLE ML</p>
+          <h2>Find students who may need extra support</h2>
+          <p>Choose a subject, compare three models, check fairness by gender, and search the flagged student names.</p>
+        </div>
+        <div class="intro-mark" aria-hidden="true"><span>01</span><span>05</span></div>
+      </section>
+
+      <section class="panel settings-panel" aria-labelledby="settings-heading">
+        <div class="panel-heading">
+          <div>
+            <p class="section-number">01 / SETUP</p>
+            <h2 id="settings-heading">Choose subject and alert settings</h2>
+          </div>
+          <p class="panel-help">Marks are out of 100. A mark below the cutoff is labelled at risk.</p>
+        </div>
+        <form id="analysis-form" class="settings-grid">
+          <label class="field field-subject">
+            <span>Subject to review</span>
+            <select id="subject-select" required></select>
+            <small id="subject-note">Loading the project dataset…</small>
+          </label>
+          <label class="field">
+            <span>At-risk mark cutoff</span>
+            <input id="grade-cutoff" type="number" min="1" max="99" value="50" required>
+            <small>Students below this mark count as at risk.</small>
+          </label>
+          <label class="field">
+            <span>Alert threshold</span>
+            <input id="alert-threshold" type="number" min="0.1" max="0.9" step="0.05" value="0.5" required>
+            <small>Higher values flag fewer students.</small>
+          </label>
+          <div class="form-actions">
+            <button id="analyze-button" class="button button-primary" type="submit">Run subject analysis</button>
+            <span id="page-status" role="status" aria-live="polite">Loading subjects…</span>
+          </div>
+        </form>
+      </section>
+
+      <div id="dataset-warning" class="notice notice-warm">
+        This project uses generated demo records and fictional Indian names. It does not contain real student data.
+      </div>
+      <div id="error-box" class="notice notice-error hidden" role="alert"></div>
+
+      <section class="panel" aria-labelledby="big-data-heading">
+        <div class="panel-heading"><div><p class="section-number">BIG DATA PROCESSING LAB</p><h2 id="big-data-heading">Semester summary with MapReduce</h2></div><p class="panel-help">A local batch simulation that demonstrates mapper, shuffle, and reducer stages.</p></div>
+        <div class="bigdata-stats">
+          <article class="summary-card"><span>Input records</span><strong id="bigdata-records">Loading…</strong></article>
+          <article class="summary-card"><span>Map batches</span><strong id="bigdata-batches">—</strong></article>
+          <article class="summary-card"><span>Processing pattern</span><strong>Batch / key-value</strong></article>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Semester</th><th>Students</th><th>At risk (&lt;50 avg.)</th><th>Risk rate</th><th>Mean average</th><th>Mean attendance</th></tr></thead><tbody id="semester-summary"></tbody></table></div>
+        <p id="bigdata-note" class="footnote">Loading the MapReduce demonstration…</p>
+      </section>
+
+      <section class="panel" aria-labelledby="concepts-heading">
+        <div class="panel-heading"><div><p class="section-number">COURSE CONCEPTS</p><h2 id="concepts-heading">Where the syllabus appears in this project</h2></div></div>
+        <div class="concept-grid">
+          <article><h3>Big data and storage</h3><p>The CSV is structured data stored as a local file. Its volume is intentionally small; HDFS, replication, sharding, and distributed storage are architecture concepts for a future scale-out version.</p></article>
+          <article><h3>Hadoop and MapReduce</h3><p>The semester lab groups mapper outputs by semester and reduces them into counts, averages, and risk rates. It teaches batch processing and key-based aggregation, but runs sequentially on this computer.</p></article>
+          <article><h3>Hive and HiveQL</h3><p>The grouped output is equivalent to a SQL aggregation. A Hive version could query a table partitioned by semester; Hive itself is not required or running in this local Flask demo.</p><pre><code>SELECT semester, COUNT(*) AS students, AVG(overall_average) AS mean_mark FROM student_performance GROUP BY semester;</code></pre></article>
+          <article><h3>NoSQL and the CAP theorem</h3><p>A future distributed student event store could use a NoSQL database for flexible records. Under a network partition, CAP describes the tradeoff between consistency and availability; this single-machine CSV app does not implement a distributed database.</p></article>
+          <article><h3>HDFS architecture and replication</h3><p>In HDFS, the NameNode tracks file metadata and DataNodes store file blocks, typically with replicated copies for fault tolerance. This project reads one local CSV, so HDFS storage and replication are architectural extensions, not active features.</p></article>
+          <article><h3>Analytics with R</h3><p>The existing model comparison, fairness metrics, and SHAP explanations are analytics work. Similar exploratory summaries and graphs can be reproduced in R; the web app currently uses Python.</p></article>
+        </div>
+      </section>
+
+      <div id="results" class="hidden">
+        <section class="summary-grid" aria-label="Analysis summary">
+          <article class="summary-card"><span>Students in dataset</span><strong id="summary-students">—</strong></article>
+          <article class="summary-card"><span>Observed below cutoff</span><strong id="summary-risk-rate">—</strong></article>
+          <article class="summary-card"><span>Model inputs</span><strong id="summary-predictors">—</strong></article>
+          <article class="summary-card"><span>Fairness checked by</span><strong id="summary-group">—</strong></article>
+        </section>
+
+        <section class="panel" aria-labelledby="risk-heading">
+          <div class="panel-heading">
+            <div>
+              <p class="section-number">02 / STUDENT LIST</p>
+              <h2 id="risk-heading">Students to review</h2>
+              <p id="risk-subtitle" class="panel-help panel-help-left">Students flagged by the Random Forest model for the selected subject.</p>
+            </div>
+            <a id="download-risk-list" class="button button-secondary hidden" href="#">Download names</a>
+          </div>
+          <div class="risk-toolbar">
+            <label class="search-field">
+              <span class="search-icon" aria-hidden="true">⌕</span>
+              <input id="risk-search" type="search" placeholder="Search student name or ID" aria-label="Search at-risk students by name or ID">
+            </label>
+            <span id="risk-count" class="risk-count" aria-live="polite">Run an analysis to see flagged students.</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Student name</th><th>Student ID</th><th>Gender</th><th>Semester</th><th>Subject mark</th><th>Overall average</th><th>Risk chance</th></tr>
+              </thead>
+              <tbody id="risk-list-body"></tbody>
+            </table>
+          </div>
+          <p class="footnote">Names are fictional. This list shows only held-out test students whose Random Forest risk chance meets your alert threshold.</p>
+        </section>
+
+        <section class="panel" aria-labelledby="models-heading">
+          <div class="panel-heading">
+            <div><p class="section-number">03 / MODEL COMPARISON</p><h2 id="models-heading">How the models performed</h2></div>
+            <a id="download-results" class="button button-secondary hidden" href="#">Download results</a>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Model</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1</th>
+                  <th>ROC AUC</th><th>Demographic parity gap</th><th>Equal opportunity gap</th><th>Train (s)</th><th>Predict (ms)</th>
+                </tr>
+              </thead>
+              <tbody id="model-results"></tbody>
+            </table>
+          </div>
+          <p class="footnote">Results use a fixed 75/25 train/test split. Time values measure this computer's run, not money or energy costs.</p>
+        </section>
+
+        <section class="panel" aria-labelledby="fairness-heading">
+          <div class="panel-heading">
+            <div><p class="section-number">04 / FAIRNESS</p><h2 id="fairness-heading">Compare results by gender</h2></div>
+            <p class="panel-help">Smaller gaps mean the groups are closer on that measure. This check cannot prove a model is fair overall.</p>
+          </div>
+          <div id="fairness-summary" class="fairness-cards"></div>
+          <h3>Random Forest rates for each group</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Gender group</th><th>Rule</th><th>Selection rate</th><th>True-positive rate</th><th>Test examples</th><th>At-risk examples</th></tr></thead>
+              <tbody id="group-rates"></tbody>
+            </table>
+          </div>
+          <p class="footnote">The adjusted model uses gender during its equal-opportunity experiment. This is a classroom comparison, not a school decision rule.</p>
+        </section>
+
+        <section class="panel" aria-labelledby="explain-heading">
+          <div class="panel-heading">
+            <div><p class="section-number">05 / EXPLANATION</p><h2 id="explain-heading">Why did the model flag a student?</h2></div>
+            <p class="panel-help">SHAP shows which inputs moved this model's estimate up or down. It does not show cause and effect.</p>
+          </div>
+          <div class="explain-controls">
+            <label class="field"><span>Model</span><select id="explain-model">
+              <option>Random Forest</option><option>Logistic Regression</option><option>Decision Tree</option>
+            </select></label>
+            <label class="field field-grow"><span>Test student</span><select id="example-select"></select></label>
+            <button id="explain-button" class="button button-secondary" type="button">Explain prediction</button>
+          </div>
+          <div id="prediction-summary" class="prediction-summary"></div>
+          <div class="explain-grid">
+            <div>
+              <h3>Information used by the model</h3>
+              <dl id="student-profile" class="profile-list"></dl>
+            </div>
+            <div>
+              <h3>Inputs with the biggest effect</h3>
+              <div id="shap-chart" class="shap-chart"></div>
+              <p class="footnote">Bars to the right increased the risk estimate; bars to the left lowered it.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <footer class="site-footer">
+        <p>Local student project · Use these results as a learning demo, not as the only basis for student decisions.</p>
+        <p>The dataset and every name are generated examples, not real Indian student records.</p>
+      </footer>
+    </main>
+    <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+  </body>
+</html>
